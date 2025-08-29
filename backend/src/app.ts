@@ -1,13 +1,18 @@
 import express, { Request, Response } from 'express';
-// Importa o pool de conexões do banco de dados (corrigido: pool, não connectToDatabase)
-import pool, { connectToDatabase } from './db'; 
+import cors from 'cors';
+import pool, { connectToDatabase } from './db';
 
 const app = express();
 const port = 3000;
 
-app.use(express.json()); // Middleware para processar JSON
+app.use(cors({
+  origin: 'http://localhost:4200',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true
+}));
 
-// Rota de teste inicial
+app.use(express.json());
+
 app.get('/', (req: Request, res: Response) => {
   res.send('Servidor está rodando!');
 });

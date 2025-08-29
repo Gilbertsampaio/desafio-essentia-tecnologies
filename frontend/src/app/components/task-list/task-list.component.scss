@@ -1,0 +1,35 @@
+/* Você pode adicionar estilos específicos do componente aqui,
+mas o Tailwind CSS já lida com a maior parte do visual. */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 1.5rem; /* 24px */
+  height: 1.5rem; /* 24px */
+  border: 2px solid theme('colors.blue.400');
+  border-radius: theme('borderRadius.md');
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  position: relative;
+}
+
+input[type="checkbox"]:checked {
+  background-color: theme('colors.blue.600');
+  border-color: theme('colors.blue.600');
+}
+
+input[type="checkbox"]:checked::before {
+  content: '\2713'; /* Checkmark Unicode */
+  display: block;
+  color: white;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px theme('colors.blue.200');
+}
