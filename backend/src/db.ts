@@ -4,7 +4,7 @@ import mysql from 'mysql2/promise';
 const dbConfig = {
   host: 'localhost',
   user: 'root', // Ou o usuário que você criou
-  password: 'SUA_SENHA_AQUI',
+  password: '1611@sampaioGGG',
   database: 'techx_tasks', // Vamos criar este banco de dados
 };
 
