@@ -1,23 +1,151 @@
+// import express, { Request, Response } from 'express';
+// import cors from 'cors';
+// import pool, { connectToDatabase } from './db';
+
+// const app = express();
+// const port = 3000;
+
+// app.use(cors({
+//   origin: 'http://localhost:4200',
+//   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+//   credentials: true
+// }));
+
+// app.use(express.json());
+
+// app.get('/', (req: Request, res: Response) => {
+//   res.send('Servidor está rodando!');
+// });
+
+// // --- Rotas da API para Tarefas (CRUD) ---
+
+// // 1. Criar uma nova tarefa
+// app.post('/api/tasks', async (req: Request, res: Response) => {
+//   const { title, description } = req.body;
+//   if (!title) {
+//     return res.status(400).json({ error: 'O título é obrigatório.' });
+//   }
+//   try {
+//     const [result] = await pool.execute(
+//       'INSERT INTO tasks (title, description) VALUES (?, ?)',
+//       [title, description]
+//     );
+//     // Retorna a tarefa criada com um ID gerado pelo banco e status inicial
+//     res.status(201).json({ id: (result as any).insertId, title, description, completed: false, created_at: new Date() });
+//   } catch (error) {
+//     console.error('Erro ao criar a tarefa:', error);
+//     res.status(500).json({ error: 'Erro ao criar a tarefa.' });
+//   }
+// });
+
+// // 2. Listar todas as tarefas
+// app.get('/api/tasks', async (req: Request, res: Response) => {
+//   try {
+//     const [rows] = await pool.query('SELECT * FROM tasks ORDER BY created_at DESC'); // Ordena por data de criação
+//     res.json(rows);
+//   } catch (error) {
+//     console.error('Erro ao listar as tarefas:', error);
+//     res.status(500).json({ error: 'Erro ao listar as tarefas.' });
+//   }
+// });
+
+// // 3. Atualizar uma tarefa
+// app.put('/api/tasks/:id', async (req: Request, res: Response) => {
+//   const { id } = req.params;
+//   const { title, description, completed } = req.body;
+
+//   // Verifica se pelo menos um campo para atualização foi fornecido
+//   if (title === undefined && description === undefined && completed === undefined) {
+//     return res.status(400).json({ error: 'Nenhum campo para atualização fornecido.' });
+//   }
+
+//   // Constrói a query de forma dinâmica para permitir atualizações parciais
+//   const fields: string[] = [];
+//   const values: any[] = [];
+
+//   if (title !== undefined) {
+//     fields.push('title = ?');
+//     values.push(title);
+//   }
+//   if (description !== undefined) {
+//     fields.push('description = ?');
+//     values.push(description);
+//   }
+//   if (completed !== undefined) {
+//     fields.push('completed = ?');
+//     values.push(completed);
+//   }
+
+//   if (fields.length === 0) {
+//     return res.status(400).json({ error: 'Nenhum campo válido para atualização fornecido.' });
+//   }
+
+//   values.push(id); // Adiciona o ID para a cláusula WHERE
+
+//   try {
+//     const [result] = await pool.execute(
+//       `UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`,
+//       values
+//     );
+//     if ((result as any).affectedRows === 0) {
+//       return res.status(404).json({ error: 'Tarefa não encontrada.' });
+//     }
+//     res.json({ message: 'Tarefa atualizada com sucesso.' });
+//   } catch (error) {
+//     console.error('Erro ao atualizar a tarefa:', error);
+//     res.status(500).json({ error: 'Erro ao atualizar a tarefa.' });
+//   }
+// });
+
+// // 4. Deletar uma tarefa
+// app.delete('/api/tasks/:id', async (req: Request, res: Response) => {
+//   const { id } = req.params;
+//   try {
+//     const [result] = await pool.execute('DELETE FROM tasks WHERE id = ?', [id]);
+//     if ((result as any).affectedRows === 0) {
+//       return res.status(404).json({ error: 'Tarefa não encontrada.' });
+//     }
+//     res.json({ message: 'Tarefa deletada com sucesso.' });
+//   } catch (error) {
+//     console.error('Erro ao deletar a tarefa:', error);
+//     res.status(500).json({ error: 'Erro ao deletar a tarefa.' });
+//   }
+// });
+
+// // Inicia o servidor e se conecta ao banco de dados
+// const startServer = async () => {
+//   await connectToDatabase(); // Tenta conectar ao banco de dados
+
+//   app.listen(port, () => {
+//     console.log(`Servidor rodando em http://localhost:${port}`);
+//   });
+// };
+
+// startServer();
+
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import pool, { connectToDatabase } from './db';
+import connectToMongoDB from './mongodb'; // Importa a conexão com MongoDB
+import Task, { ITask } from './task.model'; // Importa o modelo Mongoose de Tarefas
 
 const app = express();
 const port = 3000;
 
+// Use o middleware CORS
 app.use(cors({
-  origin: 'http://localhost:4200',
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true
+  origin: 'http://localhost:4200', // Permite requisições APENAS do seu frontend Angular
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Métodos HTTP permitidos
+  credentials: true // Permite o envio de cookies de sessão, etc.
 }));
 
 app.use(express.json());
 
+// Rota de teste
 app.get('/', (req: Request, res: Response) => {
-  res.send('Servidor está rodando!');
+  res.send('Servidor está rodando (com MongoDB)!');
 });
 
-// --- Rotas da API para Tarefas (CRUD) ---
+// --- Rotas da API para Tarefas (CRUD com MongoDB) ---
 
 // 1. Criar uma nova tarefa
 app.post('/api/tasks', async (req: Request, res: Response) => {
@@ -26,14 +154,23 @@ app.post('/api/tasks', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'O título é obrigatório.' });
   }
   try {
-    const [result] = await pool.execute(
-      'INSERT INTO tasks (title, description) VALUES (?, ?)',
-      [title, description]
-    );
-    // Retorna a tarefa criada com um ID gerado pelo banco e status inicial
-    res.status(201).json({ id: (result as any).insertId, title, description, completed: false, created_at: new Date() });
+    const newTask = new Task({
+      title,
+      description: description || undefined, // Mongoose lida com undefined
+      completed: false,
+      createdAt: new Date()
+    });
+    const savedTask = await newTask.save();
+    // Mapeia o documento Mongoose para um formato compatível com o frontend, se necessário
+    res.status(201).json({
+      id: savedTask._id, // MongoDB usa _id como ID
+      title: savedTask.title,
+      description: savedTask.description,
+      completed: savedTask.completed,
+      created_at: savedTask.createdAt // Mantém o nome da propriedade para o frontend
+    });
   } catch (error) {
-    console.error('Erro ao criar a tarefa:', error);
+    console.error('Erro ao criar a tarefa (MongoDB):', error);
     res.status(500).json({ error: 'Erro ao criar a tarefa.' });
   }
 });
@@ -41,10 +178,18 @@ app.post('/api/tasks', async (req: Request, res: Response) => {
 // 2. Listar todas as tarefas
 app.get('/api/tasks', async (req: Request, res: Response) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM tasks ORDER BY created_at DESC'); // Ordena por data de criação
-    res.json(rows);
+    const tasks = await Task.find().sort({ createdAt: -1 }); // Ordena por createdAt decrescente
+    // Mapeia os documentos Mongoose para um formato compatível com o frontend
+    const mappedTasks = tasks.map(task => ({
+      id: task._id,
+      title: task.title,
+      description: task.description,
+      completed: task.completed,
+      created_at: task.createdAt
+    }));
+    res.json(mappedTasks);
   } catch (error) {
-    console.error('Erro ao listar as tarefas:', error);
+    console.error('Erro ao listar as tarefas (MongoDB):', error);
     res.status(500).json({ error: 'Erro ao listar as tarefas.' });
   }
 });
@@ -54,45 +199,23 @@ app.put('/api/tasks/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   const { title, description, completed } = req.body;
 
-  // Verifica se pelo menos um campo para atualização foi fornecido
   if (title === undefined && description === undefined && completed === undefined) {
     return res.status(400).json({ error: 'Nenhum campo para atualização fornecido.' });
   }
 
-  // Constrói a query de forma dinâmica para permitir atualizações parciais
-  const fields: string[] = [];
-  const values: any[] = [];
-
-  if (title !== undefined) {
-    fields.push('title = ?');
-    values.push(title);
-  }
-  if (description !== undefined) {
-    fields.push('description = ?');
-    values.push(description);
-  }
-  if (completed !== undefined) {
-    fields.push('completed = ?');
-    values.push(completed);
-  }
-
-  if (fields.length === 0) {
-    return res.status(400).json({ error: 'Nenhum campo válido para atualização fornecido.' });
-  }
-
-  values.push(id); // Adiciona o ID para a cláusula WHERE
-
   try {
-    const [result] = await pool.execute(
-      `UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`,
-      values
+    const updatedTask = await Task.findByIdAndUpdate(
+      id,
+      { $set: { title, description, completed } }, // Usa $set para atualizar campos específicos
+      { new: true, runValidators: true } // 'new: true' retorna o documento atualizado
     );
-    if ((result as any).affectedRows === 0) {
+
+    if (!updatedTask) {
       return res.status(404).json({ error: 'Tarefa não encontrada.' });
     }
     res.json({ message: 'Tarefa atualizada com sucesso.' });
   } catch (error) {
-    console.error('Erro ao atualizar a tarefa:', error);
+    console.error('Erro ao atualizar a tarefa (MongoDB):', error);
     res.status(500).json({ error: 'Erro ao atualizar a tarefa.' });
   }
 });
@@ -101,21 +224,21 @@ app.put('/api/tasks/:id', async (req: Request, res: Response) => {
 app.delete('/api/tasks/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    const [result] = await pool.execute('DELETE FROM tasks WHERE id = ?', [id]);
-    if ((result as any).affectedRows === 0) {
+    const deletedTask = await Task.findByIdAndDelete(id);
+
+    if (!deletedTask) {
       return res.status(404).json({ error: 'Tarefa não encontrada.' });
     }
     res.json({ message: 'Tarefa deletada com sucesso.' });
   } catch (error) {
-    console.error('Erro ao deletar a tarefa:', error);
+    console.error('Erro ao deletar a tarefa (MongoDB):', error);
     res.status(500).json({ error: 'Erro ao deletar a tarefa.' });
   }
 });
 
-// Inicia o servidor e se conecta ao banco de dados
+// Inicia o servidor e se conecta ao MongoDB
 const startServer = async () => {
-  await connectToDatabase(); // Tenta conectar ao banco de dados
-
+  await connectToMongoDB(); // Conecta ao MongoDB
   app.listen(port, () => {
     console.log(`Servidor rodando em http://localhost:${port}`);
   });
