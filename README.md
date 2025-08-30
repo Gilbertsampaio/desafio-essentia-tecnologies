@@ -1,26 +1,26 @@
-# Aplica??o de Gerenciamento de Tarefas (Full-Stack)
+# Aplicação de Gerenciamento de Tarefas (Full-Stack)
 
-Este projeto consiste em uma aplica??o web completa para gerenciamento de tarefas, com um backend desenvolvido em Node.js (Express e TypeScript) e um frontend em Angular. Ele permite aos usu?rios criar, visualizar, atualizar e excluir tarefas de forma intuitiva.
+Este projeto consiste em uma aplicação web completa para gerenciamento de tarefas, com um backend desenvolvido em Node.js (Express e TypeScript) e um frontend em Angular. Ele permite aos usuários criar, visualizar, atualizar e excluir tarefas de forma intuitiva.
 
-## Vis?o Geral do Projeto
-A aplica??o ? dividida em dois m?dulos principais:
+## Visão Geral do Projeto
+A aplicação é dividida em dois módulos principais:
 
-- **Backend (backend/):** Uma API RESTful que gerencia a l?gica de neg?cios e a persist?ncia de dados no MySQL.
-- **Frontend (frontend/):** Uma interface de usu?rio interativa constru?da com Angular para interagir com a API do backend.
+- **Backend (backend/):** Uma API RESTful que gerencia a lógica de negócios e a persistência de dados no MySQL.
+- **Frontend (frontend/):** Uma interface de usuário interativa construída com Angular para interagir com a API do backend.
 
 ## Requisitos do Sistema
-Para executar este projeto, voc? precisar? ter instalado:
+Para executar este projeto, você precisará ter instalado:
 
-- Node.js (vers?o LTS recomendada) e NPM (gerenciador de pacotes do Node.js).
-- Angular CLI (vers?o global).
-- Git (para controle de vers?o).
+- Node.js (versão LTS recomendada) e NPM (gerenciador de pacotes do Node.js).
+- Angular CLI (versão global).
+- Git (para controle de versão).
 - MySQL Server (para o banco de dados do backend).
-- MongoDB (instalado conforme requisito inicial, mas n?o utilizado na aplica??o de tarefas principal).
+- MongoDB (instalado conforme requisito inicial, mas não utilizado na aplicação de tarefas principal).
 
 ---
 
 ## 1. Backend (API RESTful)
-Este m?dulo ? respons?vel pela l?gica de neg?cio e comunica??o com o banco de dados.
+Este módulo é responsável pela lógica de negócio e comunicação com o banco de dados.
 
 ### Tecnologias Utilizadas (Backend)
 - Node.js
@@ -31,8 +31,8 @@ Este m?dulo ? respons?vel pela l?gica de neg?cio e comunica??o com o banco de da
 - cors
 - ts-node-dev
 
-### Configura??o do Banco de Dados (MySQL)
-1. Instale o MySQL e certifique-se de que o servidor est? em execu??o.
+### Configuração do Banco de Dados (MySQL)
+1. Instale o MySQL e certifique-se de que o servidor está em execução.
 2. Crie o banco de dados executando:
 
 ```sql
@@ -52,23 +52,23 @@ CREATE TABLE tasks (
 );
 ```
 
-> **Credenciais:** Atualize `backend/src/db.ts` com as credenciais do seu ambiente (usu?rio, senha, host, porto).
+> **Credenciais:** Atualize `backend/src/db.ts` com as credenciais do seu ambiente (usuário, senha, host, porto).
 
-### Instala??o e Execu??o (Backend)
+### Instalação e Execução (Backend)
 ```bash
 cd backend
 npm install
 npm start
 ```
 
-O servidor estar? rodando em `http://localhost:3000`.
+O servidor estará rodando em `http://localhost:3000`.
 
 ### Endpoints da API (Backend)
 Base: `http://localhost:3000/api/tasks`
 
 - `POST /api/tasks`  
   Cria uma nova tarefa.  
-  Corpo JSON: `{ "title": "T?tulo da Tarefa", "description": "Descri??o detalhada (opcional)" }`  
+  Corpo JSON: `{ "title": "Título da Tarefa", "description": "Descrição detalhada (opcional)" }`  
   Resposta: `201 Created` com a tarefa criada.
 
 - `GET /api/tasks`  
@@ -77,7 +77,7 @@ Base: `http://localhost:3000/api/tasks`
 
 - `PUT /api/tasks/:id`  
   Atualiza uma tarefa pelo ID.  
-  Corpo JSON: `{ "title": "Novo T?tulo (opcional)", "description": "Nova Descri??o (opcional)", "completed": true }`  
+  Corpo JSON: `{ "title": "Novo Título (opcional)", "description": "Nova Descrição (opcional)", "completed": true }`  
   Resposta: `200 OK` com mensagem de sucesso.
 
 - `DELETE /api/tasks/:id`  
@@ -86,103 +86,103 @@ Base: `http://localhost:3000/api/tasks`
 
 ---
 
-## 2. Frontend (Aplica??o Angular)
-Este m?dulo fornece a interface de usu?rio para interagir com a API do backend.
+## 2. Frontend (Aplicação Angular)
+Este módulo fornece a interface de usuário para interagir com a API do backend.
 
 ### Tecnologias Utilizadas (Frontend)
-- Angular (Componentes aut?nomos)
+- Angular (Componentes autônomos)
 - TypeScript
 - Angular CLI
 - Tailwind CSS
 - HttpClient
 
-> **Pr?-requisito:** Backend rodando em `http://localhost:3000`.
+> **Pré-requisito:** Backend rodando em `http://localhost:3000`.
 
-### Instala??o e Execu??o (Frontend)
+### Instalação e Execução (Frontend)
 ```bash
 cd frontend
 npm install
 ng serve --open
 ```
 
-O app geralmente abrir? em `http://localhost:4200`.
+O app geralmente abrirá em `http://localhost:4200`.
 
 ### Funcionalidades (Frontend)
-- Visualizar tarefas (ordenadas por data de cria??o, mais recente primeiro).
-- Adicionar tarefa (t?tulo e descri??o).
+- Visualizar tarefas (ordenadas por data de criação, mais recente primeiro).
+- Adicionar tarefa (título e descrição).
 - Editar tarefa.
-- Marcar como conclu?da.
+- Marcar como concluída.
 - Excluir tarefa.
 
 ---
 
-## ?? Endpoints da API
+## 🔑 Endpoints da API
 
-### Autentica??o
+### Autenticação
 
--   `POST /api/auth/register` ? Registrar usu?rio\
--   `POST /api/auth/login` ? Login e retorno de JWT
+-   `POST /api/auth/register` → Registrar usuário\
+-   `POST /api/auth/login` → Login e retorno de JWT
 
 ### Tarefas (rotas protegidas com JWT)
 
--   `POST /api/tasks` ? Criar nova tarefa\
--   `GET /api/tasks` ? Listar tarefas\
--   `PUT /api/tasks/:id` ? Atualizar tarefa\
--   `DELETE /api/tasks/:id` ? Excluir tarefa
+-   `POST /api/tasks` → Criar nova tarefa\
+-   `GET /api/tasks` → Listar tarefas\
+-   `PUT /api/tasks/:id` → Atualizar tarefa\
+-   `DELETE /api/tasks/:id` → Excluir tarefa
 
 ---
 
-## ??? Funcionalidades Frontend
+## 🖥️ Funcionalidades Frontend
 
-? Autentica??o (Login / Registro)\
-? Prote??o de rotas via **AuthGuard**\
-? CRUD de Tarefas (Adicionar, Listar, Editar, Excluir)\
-? Marcar tarefas como conclu?das
+✅ Autenticação (Login / Registro)\
+✅ Proteção de rotas via **AuthGuard**\
+✅ CRUD de Tarefas (Adicionar, Listar, Editar, Excluir)\
+✅ Marcar tarefas como concluídas
 
 ---
 
 ### Estrutura do Projeto (Frontend)
-- `src/app/app.component.ts` ? componente raiz que hospeda o TaskListComponent.
-- `src/app/services/task.service.ts` ? servi?o respons?vel pela comunica??o com a API.
-- `src/app/components/task-list/task-list.component.ts` ? exibe lista de tarefas e gerencia CRUD.
-- `src/app/app.config.ts` ? configura??o global (HttpClient, Forms, etc.).
-- `tailwind.config.js` ? configura??o do Tailwind CSS.
-- `postcss.config.js` ? configura??o do PostCSS.
-- `src/styles.scss` ? estilos globais (Tailwind).
+- `src/app/app.component.ts` — componente raiz que hospeda o TaskListComponent.
+- `src/app/services/task.service.ts` — serviço responsável pela comunicação com a API.
+- `src/app/components/task-list/task-list.component.ts` — exibe lista de tarefas e gerencia CRUD.
+- `src/app/app.config.ts` — configuração global (HttpClient, Forms, etc.).
+- `tailwind.config.js` — configuração do Tailwind CSS.
+- `postcss.config.js` — configuração do PostCSS.
+- `src/styles.scss` — estilos globais (Tailwind).
 
 ---
 
-## 3. Considera??es sobre MongoDB
-O MongoDB foi inclu?do nos requisitos de ambiente por demonstra??o e para poss?veis expans?es futuras. Atualmente, a persist?ncia principal da aplica??o ? feita em MySQL.
+## 3. Considerações sobre MongoDB
+O MongoDB foi incluído nos requisitos de ambiente por demonstração e para possíveis expansões futuras. Atualmente, a persistência principal da aplicação é feita em MySQL.
 
 ---
 
 ## Desafio Extra: Backend com MongoDB
-Este projeto foi expandido com um desafio extra para demonstrar a flexibilidade do backend em utilizar diferentes bancos de dados. Foi implementada uma vers?o alternativa do backend onde a persist?ncia das tarefas ? gerenciada pelo MongoDB, utilizando o Mongoose ODM (Object Data Modeling).
+Este projeto foi expandido com um desafio extra para demonstrar a flexibilidade do backend em utilizar diferentes bancos de dados. Foi implementada uma versão alternativa do backend onde a persistência das tarefas é gerenciada pelo MongoDB, utilizando o Mongoose ODM (Object Data Modeling).
 
 ### Tecnologias Adicionais Utilizadas (Backend com MongoDB)
 - **MongoDB:** Banco de dados NoSQL baseado em documentos.
 - **Mongoose:** Biblioteca para modelagem de dados de objetos para MongoDB no Node.js.
 
-### Configura??o e Execu??o (Backend com MongoDB)
-1. Certifique-se de que o **MongoDB Server** est? rodando em sua m?quina (porta padr?o `27017`).
-2. O banco de dados ser? criado automaticamente como `techx_tasks_mongo` quando a aplica??o for iniciada e os dados forem inseridos.
-3. Navegue at? o diret?rio backend:
+### Configuração e Execução (Backend com MongoDB)
+1. Certifique-se de que o **MongoDB Server** está rodando em sua máquina (porta padrão `27017`).
+2. O banco de dados será criado automaticamente como `techx_tasks_mongo` quando a aplicação for iniciada e os dados forem inseridos.
+3. Navegue até o diretório backend:
 
 ```bash
 cd backend
 ```
 
-4. Instale as depend?ncias adicionais:
+4. Instale as dependências adicionais:
 
 ```bash
 npm install mongoose @types/mongoose
 ```
 
-5. Altere a implementa??o do banco de dados:
-   - O arquivo `backend/src/app.ts` foi modificado para usar opera??es do **Mongoose** em vez do **mysql2**.
+5. Altere a implementação do banco de dados:
+   - O arquivo `backend/src/app.ts` foi modificado para usar operações do **Mongoose** em vez do **mysql2**.
    - Foram criados os arquivos:
-     - `backend/src/mongodb.ts` (conex?o com o MongoDB)
+     - `backend/src/mongodb.ts` (conexão com o MongoDB)
      - `backend/src/task.model.ts` (Schema/Modelo da Tarefa no Mongoose).
 
 6. Inicie o servidor:
@@ -191,15 +191,15 @@ npm install mongoose @types/mongoose
 npm start
 ```
 
-7. O servidor estar? rodando em `http://localhost:3000`. Voc? ver? a mensagem **"Conectado ao banco de dados MongoDB!"**.
+7. O servidor estará rodando em `http://localhost:3000`. Você verá a mensagem **"Conectado ao banco de dados MongoDB!"**.
 
-> **Observa??o:** O frontend Angular **n?o requer modifica??es**, pois a API RESTful (`http://localhost:3000/api/tasks`) mant?m os mesmos endpoints e formato de resposta, garantindo compatibilidade. As tarefas ser?o agora persistidas no MongoDB em vez do MySQL.
+> **Observação:** O frontend Angular **não requer modificações**, pois a API RESTful (`http://localhost:3000/api/tasks`) mantém os mesmos endpoints e formato de resposta, garantindo compatibilidade. As tarefas serão agora persistidas no MongoDB em vez do MySQL.
 
 ---
 
-## Observa??es Finais
-- Ajuste as vari?veis de ambiente e credenciais conforme seu ambiente local.
-- Este README descreve a arquitetura e instru??es b?sicas. Para um ambiente de produ??o, considere configura??es adicionais (vari?veis de ambiente, conex?es seguras, dockeriza??o, backups, etc.).
+## Observações Finais
+- Ajuste as variáveis de ambiente e credenciais conforme seu ambiente local.
+- Este README descreve a arquitetura e instruções básicas. Para um ambiente de produção, considere configurações adicionais (variáveis de ambiente, conexões seguras, dockerização, backups, etc.).
 
 ---
 
