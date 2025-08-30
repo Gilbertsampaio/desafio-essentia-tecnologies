@@ -1,13 +1,18 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet } from '@angular/router';
-import { TaskListComponent } from './components/task-list/task-list.component'; 
+import { RouterModule } from '@angular/router'; // O RouterModule é essencial para o <router-outlet>
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, TaskListComponent],
-  templateUrl: './app.component.html',
+  imports: [
+    CommonModule,
+    RouterModule // Mantenha apenas RouterModule para lidar com o roteamento
+    // Remova 'AuthDashboardComponent' daqui, pois ele será carregado via router-outlet
+  ],
+  template: `
+    <router-outlet></router-outlet>
+  `,
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent {

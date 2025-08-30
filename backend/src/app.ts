@@ -1,154 +1,118 @@
-// import express, { Request, Response } from 'express';
-// import cors from 'cors';
-// import pool, { connectToDatabase } from './db';
-
-// const app = express();
-// const port = 3000;
-
-// app.use(cors({
-//   origin: 'http://localhost:4200',
-//   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-//   credentials: true
-// }));
-
-// app.use(express.json());
-
-// app.get('/', (req: Request, res: Response) => {
-//   res.send('Servidor está rodando!');
-// });
-
-// // --- Rotas da API para Tarefas (CRUD) ---
-
-// // 1. Criar uma nova tarefa
-// app.post('/api/tasks', async (req: Request, res: Response) => {
-//   const { title, description } = req.body;
-//   if (!title) {
-//     return res.status(400).json({ error: 'O título é obrigatório.' });
-//   }
-//   try {
-//     const [result] = await pool.execute(
-//       'INSERT INTO tasks (title, description) VALUES (?, ?)',
-//       [title, description]
-//     );
-//     // Retorna a tarefa criada com um ID gerado pelo banco e status inicial
-//     res.status(201).json({ id: (result as any).insertId, title, description, completed: false, created_at: new Date() });
-//   } catch (error) {
-//     console.error('Erro ao criar a tarefa:', error);
-//     res.status(500).json({ error: 'Erro ao criar a tarefa.' });
-//   }
-// });
-
-// // 2. Listar todas as tarefas
-// app.get('/api/tasks', async (req: Request, res: Response) => {
-//   try {
-//     const [rows] = await pool.query('SELECT * FROM tasks ORDER BY created_at DESC'); // Ordena por data de criação
-//     res.json(rows);
-//   } catch (error) {
-//     console.error('Erro ao listar as tarefas:', error);
-//     res.status(500).json({ error: 'Erro ao listar as tarefas.' });
-//   }
-// });
-
-// // 3. Atualizar uma tarefa
-// app.put('/api/tasks/:id', async (req: Request, res: Response) => {
-//   const { id } = req.params;
-//   const { title, description, completed } = req.body;
-
-//   // Verifica se pelo menos um campo para atualização foi fornecido
-//   if (title === undefined && description === undefined && completed === undefined) {
-//     return res.status(400).json({ error: 'Nenhum campo para atualização fornecido.' });
-//   }
-
-//   // Constrói a query de forma dinâmica para permitir atualizações parciais
-//   const fields: string[] = [];
-//   const values: any[] = [];
-
-//   if (title !== undefined) {
-//     fields.push('title = ?');
-//     values.push(title);
-//   }
-//   if (description !== undefined) {
-//     fields.push('description = ?');
-//     values.push(description);
-//   }
-//   if (completed !== undefined) {
-//     fields.push('completed = ?');
-//     values.push(completed);
-//   }
-
-//   if (fields.length === 0) {
-//     return res.status(400).json({ error: 'Nenhum campo válido para atualização fornecido.' });
-//   }
-
-//   values.push(id); // Adiciona o ID para a cláusula WHERE
-
-//   try {
-//     const [result] = await pool.execute(
-//       `UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`,
-//       values
-//     );
-//     if ((result as any).affectedRows === 0) {
-//       return res.status(404).json({ error: 'Tarefa não encontrada.' });
-//     }
-//     res.json({ message: 'Tarefa atualizada com sucesso.' });
-//   } catch (error) {
-//     console.error('Erro ao atualizar a tarefa:', error);
-//     res.status(500).json({ error: 'Erro ao atualizar a tarefa.' });
-//   }
-// });
-
-// // 4. Deletar uma tarefa
-// app.delete('/api/tasks/:id', async (req: Request, res: Response) => {
-//   const { id } = req.params;
-//   try {
-//     const [result] = await pool.execute('DELETE FROM tasks WHERE id = ?', [id]);
-//     if ((result as any).affectedRows === 0) {
-//       return res.status(404).json({ error: 'Tarefa não encontrada.' });
-//     }
-//     res.json({ message: 'Tarefa deletada com sucesso.' });
-//   } catch (error) {
-//     console.error('Erro ao deletar a tarefa:', error);
-//     res.status(500).json({ error: 'Erro ao deletar a tarefa.' });
-//   }
-// });
-
-// // Inicia o servidor e se conecta ao banco de dados
-// const startServer = async () => {
-//   await connectToDatabase(); // Tenta conectar ao banco de dados
-
-//   app.listen(port, () => {
-//     console.log(`Servidor rodando em http://localhost:${port}`);
-//   });
-// };
-
-// startServer();
-
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import connectToMongoDB from './mongodb'; // Importa a conexão com MongoDB
-import Task, { ITask } from './task.model'; // Importa o modelo Mongoose de Tarefas
+import jwt from 'jsonwebtoken';
+import connectToMongoDB from './mongodb';
+import Task, { ITask } from './task.model';
+import User, { UserDocument } from './user.model';
 
 const app = express();
 const port = 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
 // Use o middleware CORS
 app.use(cors({
-  origin: 'http://localhost:4200', // Permite requisições APENAS do seu frontend Angular
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Métodos HTTP permitidos
-  credentials: true // Permite o envio de cookies de sessão, etc.
+  origin: 'http://localhost:4200',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true
 }));
 
 app.use(express.json());
 
 // Rota de teste
 app.get('/', (req: Request, res: Response) => {
-  res.send('Servidor está rodando (com MongoDB)!');
+  res.send('Servidor está rodando (com MongoDB e JWT)!');
 });
 
-// --- Rotas da API para Tarefas (CRUD com MongoDB) ---
+// --- MIDDLEWARE DE AUTENTICAÇÃO JWT ---
+// Estender o objeto Request para incluir user (opcional, mas boa prática)
+declare global {
+  namespace Express {
+    interface Request {
+      user?: { id: string; username: string };
+    }
+  }
+}
 
-// 1. Criar uma nova tarefa
-app.post('/api/tasks', async (req: Request, res: Response) => {
+const authenticateJWT = (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader) {
+    const token = authHeader.split(' ')[1]; // Espera formato 'Bearer TOKEN'
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+      if (err) {
+        return res.sendStatus(403); // Token inválido ou expirado
+      }
+      req.user = user as { id: string; username: string }; // Anexa os dados do usuário ao objeto Request
+      next();
+    });
+  } else {
+    res.sendStatus(401); // Nenhuma autorização fornecida
+  }
+};
+
+// --- ROTAS DE AUTENTICAÇÃO ---
+
+// 1. Registro de Usuário
+app.post('/api/auth/register', async (req: Request, res: Response) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Nome de usuário e senha são obrigatórios.' });
+  }
+
+  try {
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(409).json({ error: 'Nome de usuário já existe.' });
+    }
+
+    const newUser: UserDocument = new User({ username, password });
+    await newUser.save();
+    res.status(201).json({ message: 'Usuário registrado com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao registrar usuário:', error);
+    res.status(500).json({ error: 'Erro interno do servidor ao registrar usuário.' });
+  }
+});
+
+// 2. Login de Usuário
+app.post('/api/auth/login', async (req: Request, res: Response) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Nome de usuário e senha são obrigatórios.' });
+  }
+
+  try {
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(401).json({ error: 'Credenciais inválidas.' });
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Credenciais inválidas.' });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, username: user.username },
+      JWT_SECRET,
+      { expiresIn: '1h' } // Token expira em 1 hora
+    );
+
+    res.json({ token });
+  } catch (error) {
+    console.error('Erro ao fazer login:', error);
+    res.status(500).json({ error: 'Erro interno do servidor ao fazer login.' });
+  }
+});
+
+
+// --- Rotas da API para Tarefas (CRUD com MongoDB) ---
+// Agora, estas rotas serão PROTEGIDAS pelo middleware JWT
+// Para testar, você precisará enviar um token JWT válido no cabeçalho Authorization
+
+// 1. Criar uma nova tarefa (PROTEGIDA)
+app.post('/api/tasks', authenticateJWT, async (req: Request, res: Response) => {
   const { title, description } = req.body;
   if (!title) {
     return res.status(400).json({ error: 'O título é obrigatório.' });
@@ -156,18 +120,17 @@ app.post('/api/tasks', async (req: Request, res: Response) => {
   try {
     const newTask = new Task({
       title,
-      description: description || undefined, // Mongoose lida com undefined
+      description: description || undefined,
       completed: false,
       createdAt: new Date()
     });
     const savedTask = await newTask.save();
-    // Mapeia o documento Mongoose para um formato compatível com o frontend, se necessário
     res.status(201).json({
-      id: savedTask._id, // MongoDB usa _id como ID
+      id: savedTask._id,
       title: savedTask.title,
       description: savedTask.description,
       completed: savedTask.completed,
-      created_at: savedTask.createdAt // Mantém o nome da propriedade para o frontend
+      created_at: savedTask.createdAt
     });
   } catch (error) {
     console.error('Erro ao criar a tarefa (MongoDB):', error);
@@ -175,11 +138,10 @@ app.post('/api/tasks', async (req: Request, res: Response) => {
   }
 });
 
-// 2. Listar todas as tarefas
-app.get('/api/tasks', async (req: Request, res: Response) => {
+// 2. Listar todas as tarefas (PROTEGIDA)
+app.get('/api/tasks', authenticateJWT, async (req: Request, res: Response) => {
   try {
-    const tasks = await Task.find().sort({ createdAt: -1 }); // Ordena por createdAt decrescente
-    // Mapeia os documentos Mongoose para um formato compatível com o frontend
+    const tasks = await Task.find().sort({ createdAt: -1 });
     const mappedTasks = tasks.map(task => ({
       id: task._id,
       title: task.title,
@@ -194,8 +156,8 @@ app.get('/api/tasks', async (req: Request, res: Response) => {
   }
 });
 
-// 3. Atualizar uma tarefa
-app.put('/api/tasks/:id', async (req: Request, res: Response) => {
+// 3. Atualizar uma tarefa (PROTEGIDA)
+app.put('/api/tasks/:id', authenticateJWT, async (req: Request, res: Response) => {
   const { id } = req.params;
   const { title, description, completed } = req.body;
 
@@ -206,8 +168,8 @@ app.put('/api/tasks/:id', async (req: Request, res: Response) => {
   try {
     const updatedTask = await Task.findByIdAndUpdate(
       id,
-      { $set: { title, description, completed } }, // Usa $set para atualizar campos específicos
-      { new: true, runValidators: true } // 'new: true' retorna o documento atualizado
+      { $set: { title, description, completed } },
+      { new: true, runValidators: true }
     );
 
     if (!updatedTask) {
@@ -220,8 +182,8 @@ app.put('/api/tasks/:id', async (req: Request, res: Response) => {
   }
 });
 
-// 4. Deletar uma tarefa
-app.delete('/api/tasks/:id', async (req: Request, res: Response) => {
+// 4. Deletar uma tarefa (PROTEGIDA)
+app.delete('/api/tasks/:id', authenticateJWT, async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const deletedTask = await Task.findByIdAndDelete(id);
@@ -238,7 +200,7 @@ app.delete('/api/tasks/:id', async (req: Request, res: Response) => {
 
 // Inicia o servidor e se conecta ao MongoDB
 const startServer = async () => {
-  await connectToMongoDB(); // Conecta ao MongoDB
+  await connectToMongoDB();
   app.listen(port, () => {
     console.log(`Servidor rodando em http://localhost:${port}`);
   });

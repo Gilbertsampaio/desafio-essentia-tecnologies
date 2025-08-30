@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Task, TaskService } from '../../services/task.service';
+import { TaskService } from '../../services/task.service';
+import { ITask } from '../../interfaces/task.interface';
+import { Subscription } from 'rxjs'; // Importar Subscription
 
 @Component({
   selector: 'app-task-list',
@@ -10,12 +12,25 @@ import { Task, TaskService } from '../../services/task.service';
   templateUrl: './task-list.component.html',
   styleUrls: ['./task-list.component.scss']
 })
-
-export class TaskListComponent implements OnInit {
-  tasks: Task[] = [];
+export class TaskListComponent implements OnInit, OnDestroy {
+  tasks: ITask[] = [];
   newTaskTitle: string = '';
   newTaskDescription: string = '';
-  editingTask: Task | null = null;
+  editingTask: ITask | null = null;
+
+  // Variáveis para o sistema de notificações
+  showNotification: boolean = false;
+  notificationMessage: string = '';
+  notificationType: 'success' | 'error' = 'success';
+  private notificationTimer: any;
+
+  // Variáveis para o modal de confirmação
+  showConfirmModal: boolean = false;
+  confirmMessage: string = '';
+  confirmAction: (() => void) | null = null;
+  private idToDelete: number | undefined; // Armazena o ID da tarefa a ser deletada
+
+  private taskSubscription: Subscription | undefined;
 
   constructor(private taskService: TaskService) { }
 
@@ -23,99 +38,172 @@ export class TaskListComponent implements OnInit {
     this.loadTasks();
   }
 
+  ngOnDestroy(): void {
+    if (this.taskSubscription) {
+      this.taskSubscription.unsubscribe();
+    }
+    this.clearNotificationTimer();
+  }
+
+  private displayNotification(message: string, type: 'success' | 'error'): void {
+    this.clearNotificationTimer();
+    this.notificationMessage = message;
+    this.notificationType = type;
+    this.showNotification = true;
+    this.notificationTimer = setTimeout(() => {
+      this.hideNotification();
+    }, 4000);
+  }
+
+  private hideNotification(): void {
+    this.showNotification = false;
+    this.notificationMessage = '';
+    this.clearNotificationTimer();
+  }
+
+  private clearNotificationTimer(): void {
+    if (this.notificationTimer) {
+      clearTimeout(this.notificationTimer);
+      this.notificationTimer = null;
+    }
+  }
+
   loadTasks(): void {
-    this.taskService.getTasks().subscribe({
+    if (this.taskSubscription) {
+      this.taskSubscription.unsubscribe();
+    }
+    this.taskSubscription = this.taskService.getTasks().subscribe({
       next: (data) => {
         this.tasks = data;
       },
       error: (err) => {
         console.error('Erro ao carregar tarefas:', err);
-        alert('Não foi possível carregar as tarefas. Verifique se o backend está rodando.');
+        this.displayNotification('Não foi possível carregar as tarefas. Verifique se o backend está rodando.', 'error');
       }
     });
   }
 
   addTask(): void {
     if (!this.newTaskTitle.trim()) {
-      alert('O título da tarefa não pode ser vazio.');
+      this.displayNotification('O título da tarefa não pode ser vazio.', 'error');
       return;
     }
 
-    const taskToAdd: Omit<Task, 'id' | 'completed' | 'created_at'> = {
+    const newTaskPayload: Omit<ITask, 'id' | 'completed' | 'created_at'> = {
       title: this.newTaskTitle,
-      description: this.newTaskDescription.trim() || undefined
+      description: this.newTaskDescription.trim() || undefined,
     };
 
-    this.taskService.addTask(taskToAdd).subscribe({
-      next: (task) => {
-        this.tasks.unshift(task);
+    this.taskService.addTask(newTaskPayload).subscribe({
+      next: () => {
+        this.displayNotification('Tarefa adicionada com sucesso!', 'success');
         this.newTaskTitle = '';
         this.newTaskDescription = '';
+        this.loadTasks();
       },
       error: (err) => {
         console.error('Erro ao adicionar tarefa:', err);
-        alert('Não foi possível adicionar a tarefa.');
+        this.displayNotification('Erro ao adicionar tarefa. Tente novamente.', 'error');
       }
     });
   }
 
-  editTask(task: Task): void {
-    this.editingTask = { ...task };
+  editTask(task: ITask): void {
+    this.editingTask = { ...task }; // Cria uma cópia para edição
   }
 
   saveEditedTask(): void {
-    if (!this.editingTask || !this.editingTask.title.trim()) {
-      alert('O título da tarefa não pode ser vazio.');
+    if (!this.editingTask || this.editingTask.id === undefined) {
+      this.displayNotification('Não foi possível encontrar o ID da tarefa para edição.', 'error');
+      return;
+    }
+    if (!this.editingTask.title.trim()) {
+      this.displayNotification('O título da tarefa não pode ser vazio.', 'error');
       return;
     }
 
+    // Agora o compilador sabe que `id` não é undefined
     this.taskService.updateTask(this.editingTask.id!, this.editingTask).subscribe({
       next: () => {
-
-        const index = this.tasks.findIndex(t => t.id === this.editingTask!.id);
-        if (index !== -1) {
-          this.tasks[index] = this.editingTask!;
-        }
+        this.displayNotification('Tarefa atualizada com sucesso!', 'success');
         this.editingTask = null;
+        this.loadTasks();
       },
       error: (err) => {
-        console.error('Erro ao salvar edição da tarefa:', err);
-        alert('Não foi possível salvar a edição da tarefa.');
+        console.error('Erro ao atualizar tarefa:', err);
+        this.displayNotification('Erro ao atualizar tarefa. Tente novamente.', 'error');
       }
     });
   }
 
   cancelEdit(): void {
-    this.editingTask = null; 
+    this.editingTask = null;
   }
 
-  toggleCompleted(task: Task): void {
-    const updatedTask = { ...task, completed: !task.completed };
-    this.taskService.updateTask(updatedTask.id!, { completed: updatedTask.completed }).subscribe({
+  toggleCompleted(task: ITask): void {
+    if (task.id === undefined) {
+      this.displayNotification('Não foi possível encontrar o ID da tarefa para alternar o status.', 'error');
+      return;
+    }
+    const updatedTask: ITask = { ...task, completed: !task.completed };
+    
+    // Agora o compilador sabe que `id` não é undefined
+    this.taskService.updateTask(updatedTask.id!, updatedTask).subscribe({
       next: () => {
-        task.completed = updatedTask.completed;
+        this.displayNotification(`Tarefa ${updatedTask.completed ? 'concluída' : 'reaberta'}!`, 'success');
+        this.loadTasks();
       },
       error: (err) => {
-        console.error('Erro ao atualizar status da tarefa:', err);
-        alert('Não foi possível atualizar o status da tarefa.');
+        console.error('Erro ao alternar conclusão da tarefa:', err);
+        this.displayNotification('Erro ao atualizar status da tarefa.', 'error');
       }
     });
   }
 
-  deleteTask(id: number | undefined): void {
-    if (!id) return;
-    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) {
+  // Método para exibir o modal de confirmação
+  confirmDelete(id: number | undefined): void {
+    if (id === undefined) {
+      this.displayNotification('ID da tarefa inválido para exclusão.', 'error');
+      return;
+    }
+    this.confirmMessage = 'Tem certeza que deseja excluir esta tarefa?';
+    this.idToDelete = id; // Armazena o ID para exclusão
+    this.confirmAction = () => this.executeDeleteTask(); // Prepara a ação
+    this.showConfirmModal = true;
+  }
+
+  // Executa a ação de deleção após a confirmação
+  private executeDeleteTask(): void {
+    if (this.idToDelete === undefined) {
+      this.displayNotification('Erro interno: ID da tarefa não preparado para exclusão.', 'error');
+      this.hideConfirmModal();
       return;
     }
 
-    this.taskService.deleteTask(id).subscribe({
+    // Agora o compilador sabe que `idToDelete` não é undefined
+    this.taskService.deleteTask(this.idToDelete!).subscribe({
       next: () => {
-        this.tasks = this.tasks.filter(task => task.id !== id);
+        this.displayNotification('Tarefa excluída com sucesso!', 'success');
+        this.loadTasks();
       },
       error: (err) => {
-        console.error('Erro ao deletar tarefa:', err);
-        alert('Não foi possível deletar a tarefa.');
+        console.error('Erro ao excluir tarefa:', err);
+        this.displayNotification('Erro ao excluir tarefa. Tente novamente.', 'error');
       }
     });
+    this.hideConfirmModal();
+  }
+
+  // Esconde o modal de confirmação
+  hideConfirmModal(): void {
+    this.showConfirmModal = false;
+    this.confirmMessage = '';
+    this.confirmAction = null;
+    this.idToDelete = undefined; // Limpa o ID após uso
+  }
+
+  // Método chamado pelo HTML para iniciar o fluxo de exclusão
+  deleteTask(id: number | undefined): void {
+    this.confirmDelete(id);
   }
 }

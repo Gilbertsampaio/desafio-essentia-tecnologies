@@ -1,36 +1,50 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-
-export interface Task {
-  id?: number; // O id é opcional porque não existe ao criar a tarefa
-  title: string;
-  description?: string; // Descrição é opcional
-  completed: boolean;
-  created_at?: string;
-}
+import { Observable, catchError, throwError } from 'rxjs';
+import { ITask } from '../interfaces/task.interface';
 
 @Injectable({
   providedIn: 'root'
 })
 export class TaskService {
-  private apiUrl = 'http://localhost:3000/api/tasks'; // URL da sua API backend
+  private apiUrl = 'http://localhost:3000/api/tasks';
 
   constructor(private http: HttpClient) { }
 
-  getTasks(): Observable<Task[]> {
-    return this.http.get<Task[]>(this.apiUrl);
+  getTasks(): Observable<ITask[]> {
+    return this.http.get<ITask[]>(this.apiUrl)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  addTask(task: Omit<Task, 'id' | 'completed' | 'created_at'>): Observable<Task> {
-    return this.http.post<Task>(this.apiUrl, task);
+  addTask(task: Omit<ITask, 'id' | 'completed' | 'created_at'>): Observable<ITask> {
+    const newTaskPayload = {
+      title: task.title,
+      description: task.description
+    };
+    return this.http.post<ITask>(this.apiUrl, newTaskPayload)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  updateTask(id: number, task: Partial<Task>): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id}`, task);
+  updateTask(id: number, task: ITask): Observable<ITask> {
+    return this.http.put<ITask>(`${this.apiUrl}/${id}`, task)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
   deleteTask(id: number): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/${id}`);
+    return this.http.delete(`${this.apiUrl}/${id}`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  private handleError(error: any) {
+    console.error('An error occurred:', error.error.message || error.statusText);
+    return throwError(() => new Error(error.error.message || 'Server error'));
   }
 }
